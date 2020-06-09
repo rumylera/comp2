@@ -1,0 +1,311 @@
+import math
+class Lagrange:
+    def __init__(self, nodes, values):
+        self.nodes = nodes
+        val = values
+        for i in range(len(nodes)):
+            for j in range(len(nodes)):
+                if j != i:
+                    val[i] = val[i] / (nodes[i] - nodes[j])
+        self.dividers = val
+
+    def get_val(self, x):
+        values = self.dividers
+        s = 0
+        for i in range(len(self.dividers)):
+            k = 1
+            for j in range(len(self.dividers)):
+                if j != i:
+                    k *= (x - self.nodes[j])
+            s += values[i] * k
+        return s
+
+
+
+def f(x):
+    return round(1 / (1 + x ** 2), 5)
+
+
+# вычисляем узлы
+def node(k,n):
+    val = math.cos(math.pi * (2 * k + 1) / (2 * (n + 1)))
+    return val
+
+
+# вычисляем значение полинома
+def chebishev_val(x, n):
+
+    nodes = [node(k, n) for k in range(n + 1)]  # узлы - корни многочлена Чебышева
+    values = [f(nodes[i]) for i in range(len(nodes))]  # значения функции в узлах
+    polynomial = Lagrange.Lagrange(nodes, values)  # вычисляем делители полинома Лагранжа
+
+    return polynomial.get_val(x)  # возвращаем значение полинома в точке х
+    
+
+def f(x):
+    return round(1 / (1 + x ** 2), 5)
+
+
+# вычисляем значение полинома степени n в точке х
+def newton_val(n, coefs, a, h):
+    arr = []
+    nodes = []
+    for i in range(n + 1):
+        nodes.append(a + h * (i - n // 2))
+        arr.append(f(a + h * (i - n // 2)))
+
+    diffs = sep_diffs(arr, nodes)
+
+    values = [0] * (n + 1)
+
+    k = (n // 2)
+    sch = 0
+
+    for i in range(len(diffs)):
+        y = coefs[i]
+        sch += 1
+        y *= diffs[i][k]
+        y = round(y, 5)
+        if i == 0:
+            values[i] = y
+        else:
+            values[i] = values[i - 1] + y
+        if sch % 3 == 2:
+            k -= 1
+            sch = 0
+
+    return values[n]
+
+
+# разделенные разности
+def sep_diffs(arr, nodes):
+    RR1 = []
+    for i in range(len(arr) - 1):
+        val = (arr[i + 1] - arr[i])
+        RR1.append(val)
+    RR2 = []
+    for i in range(len(arr) - 2):
+        val = RR1[i + 1] - RR1[i]
+        RR2.append(val)
+
+    RR = [arr, RR1, RR2]  # будущий массив разделенных разностей
+
+    for i in range(3, len(arr)):
+        vals = []
+        for j in range(len(arr) - i):
+            vals.append(
+                round((RR[i - 1][j + 1] - RR[i - 1][j]), 5)
+            )
+        RR.append(vals)
+    return RR
+
+
+# коэффициенты N_k для составления полинома
+def coefficient(n, t):
+    coefs = [0] * (n + 1)
+    coefs[0] = 1
+    for i in range(1, n + 1):
+        y = 1
+        for j in range(1, i + 1):
+            y *= (t - ((-1) ** j) * (j // 2)) / j
+        coefs[i] = round(y, 5)
+    return coefs
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "collapsed": true,
+    "pycharm": {
+     "name": "#%% md\n"
+    }
+   },
+   "source": [
+    "## Задание №3\n",
+    "### Построение многочлена наилучшего приближения по узлам, являющимися корнями многочлена Чебышёва "
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "$f(x) = \\frac{1}{1+x^2}$ - данная функция\n",
+    "\n",
+    "$x \\in [-1, 1]$ - отрезок интерполирования\n",
+    "\n",
+    "$x_0 = 0.15$ - точка интерполирования"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%% md\n"
+    }
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 41,
+   "outputs": [],
+   "source": [
+    "import pandas as pd\n",
+    "from Newton import coefficient, newton_val\n",
+    "from Chebishev import chebishev_val"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 42,
+   "outputs": [],
+   "source": [
+    "x = 0.15\n",
+    "a, b = -1, 1\n",
+    "y = round(1 / (1 + x ** 2), 6)  # точное значение фукнции"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "Вычисляем значение интерполяционного полинома по равноотстоящим узлам в точке $x_0 = 0.15$ при различных $n$.\n"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%% md\n"
+    }
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 43,
+   "outputs": [],
+   "source": [
+    "n_s = [5, 10, 20]\n",
+    "h = 0.2\n",
+    "t = round((x - a) / h, 1)\n",
+    "\n",
+    "coefs = [coefficient(n, t) for n in n_s]\n",
+    "value_1 = []  # значения полинома\n",
+    "for i in range(len(coefs)):\n",
+    "    value_1.append(newton_val(n_s[i], coefs[i], a, h))\n",
+    "\n",
+    "errors_1 = [abs(y - value_1[i]) for i in range(len(value_1))]  # погрешности\n"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "Вычисляем значение интерполяционного полинома по корням Чебышева в точке $x_0 = 0.15$ при различных $n$.\n"
+   ],
+   "metadata": {
+    "collapsed": false
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 44,
+   "outputs": [],
+   "source": [
+    "value_2 = [chebishev_val(x, n) for n in n_s]\n",
+    "errors_2 = [abs(y - value_2[i]) for i in range(len(value_2))]"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "Печатаем результат\n"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%% md\n"
+    }
+   }
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 45,
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Точное значение функции в точке x = 0.15 : 0.977995\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": "      n  значение по равноотстоящим узлам  погрешность  \\\n0   5.0                           0.89679     0.081205   \n1  10.0                           0.98756     0.009565   \n2  20.0                           0.98077     0.002775   \n\n   значение по корням Чебышева   погрешность  \n0                     0.971882  6.112758e-03  \n1                     0.978011  1.620860e-05  \n2                     0.977996  9.671046e-07  ",
+      "text/html": "<div>\n<style scoped>\n    .dataframe tbody tr th:only-of-type {\n        vertical-align: middle;\n    }\n\n    .dataframe tbody tr th {\n        vertical-align: top;\n    }\n\n    .dataframe thead th {\n        text-align: right;\n    }\n</style>\n<table border=\"1\" class=\"dataframe\">\n  <thead>\n    <tr style=\"text-align: right;\">\n      <th></th>\n      <th>n</th>\n      <th>значение по равноотстоящим узлам</th>\n      <th>погрешность</th>\n      <th>значение по корням Чебышева</th>\n      <th>погрешность</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <th>0</th>\n      <td>5.0</td>\n      <td>0.89679</td>\n      <td>0.081205</td>\n      <td>0.971882</td>\n      <td>6.112758e-03</td>\n    </tr>\n    <tr>\n      <th>1</th>\n      <td>10.0</td>\n      <td>0.98756</td>\n      <td>0.009565</td>\n      <td>0.978011</td>\n      <td>1.620860e-05</td>\n    </tr>\n    <tr>\n      <th>2</th>\n      <td>20.0</td>\n      <td>0.98077</td>\n      <td>0.002775</td>\n      <td>0.977996</td>\n      <td>9.671046e-07</td>\n    </tr>\n  </tbody>\n</table>\n</div>"
+     },
+     "execution_count": 45,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "print('Точное значение функции в точке x = 0.15 :', y)\n",
+    "\n",
+    "data = [n_s, value_1, errors_1, value_2, errors_2]\n",
+    "indexes = [\n",
+    "    \"n\",\n",
+    "    \"значение по равноотстоящим узлам\",\n",
+    "    \"погрешность\",\n",
+    "    \"значение по корням Чебышева\",\n",
+    "    \"погрешность\"\n",
+    "]\n",
+    "df = pd.DataFrame(data, index = indexes).T\n",
+    "df\n"
+   ],
+   "metadata": {
+    "collapsed": false,
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   }
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "name": "pycharm-671264a7",
+   "language": "python",
+   "display_name": "PyCharm (Вычи)"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 2
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython2",
+   "version": "2.7.6"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 0
+}
